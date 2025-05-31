@@ -1,0 +1,633 @@
+---
+title: "Visualisasi Scrapping Kalibrr"
+author: "Nabila Syukri"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# 1. Memuat library yang dibutuhkan
+library(dplyr)
+library(ggplot2)
+library(stringr) # Untuk membersihkan data gaji
+library(scales)  # Untuk format label di plot
+
+#file_path <- "kalibrr3.xlsx"
+#data_kalibrr <- read_excel(file_path)
+#data_kalibrr
+```
+
+# Sambungkan dari mongolite
+```{r}
+library(mongolite)
+
+# koneksi R ke mongoatlas
+kalibrr <- mongo(collection = "Kalibrr",
+              db = "Project_Praktikum_MDS_UAS",
+              url = "mongodb+srv://hazelitadwi:Tujuhbelas402@cluster0.kg8jqpb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+```
+
+```{r}
+kalibrr$find(limit=5)
+```
+```{r}
+# Mengubah data menjadi data frame
+data <- kalibrr$find()
+data_kalibrr <- as.data.frame(data)
+
+
+```
+
+```{r}
+#Ubah tipe data
+data_kalibrr[] <- lapply(data_kalibrr, function(x) {
+  if (is.character(x)) {
+    as.factor(x)
+  } else {
+    x
+  }
+})
+
+
+```
+
+```{r}
+# Display the modified data frame
+str(data_kalibrr)
+head(data_kalibrr)
+```
+
+# Jumlah lowongan berdasarkan posisi
+```{r}
+posisi <- '[{
+  "$match": { "Posisi": { "$ne": null } }
+}, {
+  "$group": {
+    "_id": "$Posisi",
+    "jumlah_lowongan": { "$sum": 1 }
+  }
+}, {
+  "$project": {
+    "Posisi": "$_id",
+    "jumlah_lowongan": 1,
+    "_id": 0
+  }
+}]'
+
+data_posisi <- kalibrr$aggregate(posisi)
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+ggplot(data_posisi, aes(x = reorder(Posisi, jumlah_lowongan), y = jumlah_lowongan, fill = Posisi)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  geom_text(aes(label = jumlah_lowongan), hjust = 0) +
+  coord_flip() +
+  labs(title = "Jumlah Lowongan berdasarkan Posisi",
+       x = "Posisi",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+```
+
+# Jumlah lowongan berdasarkan status
+
+```{r}
+pipeline_status <- '[{
+  "$match": { "Status": { "$ne": null } }
+}, {
+  "$group": {
+    "_id": "$Status",
+    "jumlah_lowongan": { "$sum": 1 }
+  }
+}, {
+  "$project": {
+    "Status": "$_id",
+    "jumlah_lowongan": 1,
+    "_id": 0
+  }
+}]'
+
+data_status <- kalibrr$aggregate(pipeline_status)
+
+```
+
+```{r}
+ggplot(data_status, aes(x = reorder(Status, jumlah_lowongan), y = jumlah_lowongan, fill = Status)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  geom_text(aes(label = jumlah_lowongan), hjust = 0) +
+  coord_flip() +
+  labs(title = "Jumlah Lowongan berdasarkan Status",
+       x = "Status",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+
+```
+
+# Jumlah lowongan berdasarkan posisi dan status
+
+```{r}
+pipeline_posisi_status <- '[{
+  "$match": {
+    "Posisi": { "$ne": null },
+    "Status": { "$in": [ "Freelance", "Full Time", "Kontrak" ] }
+  }
+}, {
+  "$group": {
+    "_id": { "Posisi": "$Posisi", "Status": "$Status" },
+    "jumlah_lowongan": { "$sum": 1 }
+  }
+}, {
+  "$project": {
+    "Posisi": "$_id.Posisi",
+    "Status": "$_id.Status",
+    "jumlah_lowongan": 1,
+    "_id": 0
+  }
+}]'
+
+data_posisi_status <- kalibrr$aggregate(pipeline_posisi_status)
+
+```
+
+```{r}
+ggplot(data_posisi_status, aes(x = reorder(Posisi, jumlah_lowongan), y = jumlah_lowongan, fill = Status)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = jumlah_lowongan), position = position_stack(vjust = 0.5), size = 3, color = "white") +
+  coord_flip() +
+  labs(title = "Jumlah Lowongan berdasarkan Posisi dan Status",
+       x = "Posisi",
+       y = "Jumlah Lowongan",
+       fill = "Status") +
+  theme_minimal()
+
+```
+
+# Trend jumlah lowongan per bulan
+```{r}
+pipeline_bulan <- '[{
+  "$match": { "Bulan": { "$ne": null } }
+}, {
+  "$group": {
+    "_id": "$Bulan",
+    "jumlah_lowongan": { "$sum": 1 }
+  }
+}, {
+  "$project": {
+    "Bulan": "$_id",
+    "jumlah_lowongan": 1,
+    "_id": 0
+  }
+}]'
+
+data_bulan <- kalibrr$aggregate(pipeline_bulan)
+
+```
+
+```{r}
+library(forcats)
+
+# Susun nama bulan secara manual (jika diperlukan)
+bulan_order <- c("Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                 "Juli", "Agustus", "September", "Oktober", "November", "Desember")
+
+data_bulan$Bulan <- factor(data_bulan$Bulan, levels = bulan_order)
+
+ggplot(data_bulan, aes(x = Bulan, y = jumlah_lowongan, fill = Bulan)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = jumlah_lowongan), vjust = -0.5) +
+  labs(title = "Jumlah Lowongan per Bulan",
+       x = "Bulan",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(data_bulan, aes(x = Bulan, y = jumlah_lowongan, group = 1)) +
+  geom_point(size = 3, color = "steelblue") +  # Titik
+  geom_line(color = "steelblue", linewidth = 1) +  # Garis penghubung antar titik
+  geom_text(aes(label = jumlah_lowongan), vjust = -0.8, size = 3.5) +
+  labs(title = "Tren Jumlah Lowongan per Bulan",
+       x = "Bulan",
+       y = "Jumlah Lowongan") +
+  theme_minimal() +
+  scale_x_discrete(limits = bulan_order)  # agar urutan bulan tetap terjaga
+
+```
+
+# Perusahaan Top 10 dengan Jumlah lowongan terbanyak
+
+```{r}
+pipeline_perusahaan <- '[{
+  "$match": { "Nama Perusahaan": { "$ne": null } }
+}, {
+  "$group": {
+    "_id": "$Nama Perusahaan",
+    "jumlah_lowongan": { "$sum": 1 }
+  }
+}, {
+  "$sort": { "jumlah_lowongan": -1 }
+}, {
+  "$limit": 10
+}, {
+  "$project": {
+    "NamaPerusahaan": "$_id",
+    "jumlah_lowongan": 1,
+    "_id": 0
+  }
+}]'
+
+data_perusahaan <- kalibrr$aggregate(pipeline_perusahaan)
+
+```
+
+```{r}
+ggplot(data_perusahaan, aes(x = reorder(NamaPerusahaan, jumlah_lowongan), 
+                            y = jumlah_lowongan, fill = NamaPerusahaan)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = jumlah_lowongan), hjust = 1) +
+  coord_flip() +
+  labs(title = "Top 10 Perusahaan dengan Jumlah Lowongan Terbanyak",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+```
+
+# Top 10 Perusahaan berdasarkan posisi
+
+```{r}
+pipeline <- '[{
+  "$match": {
+    "Posisi": { "$ne": null },
+    "Nama Perusahaan": { "$ne": null }
+  }
+}, {
+  "$group": {
+    "_id": { "Nama Perusahaan": "$Nama Perusahaan", "Posisi": "$Posisi" },
+    "jumlah_lowongan": { "$sum": 1 }
+  }
+}, {
+  "$project": {
+    "Nama Perusahaan": "$_id.Nama Perusahaan",
+    "Posisi": "$_id.Posisi",
+    "jumlah_lowongan": 1,
+    "_id": 0
+  }
+}]'
+
+# Eksekusi pipeline
+agg_posisi_perusahaan <- kalibrr$aggregate(pipeline)
+
+```
+
+
+```{r}
+library(dplyr)
+
+# Ambil Top 10 perusahaan dengan jumlah lowongan terbanyak (secara keseluruhan)
+top10_perusahaan <- agg_posisi_perusahaan %>%
+  group_by(`Nama Perusahaan`) %>%
+  summarise(total = sum(jumlah_lowongan)) %>%
+  arrange(desc(total)) %>%
+  slice_head(n = 10) %>%
+  pull(`Nama Perusahaan`)
+
+# Filter hanya data dari perusahaan top 10 tadi
+agg_top10_posisi_perusahaan <- agg_posisi_perusahaan %>%
+  filter(`Nama Perusahaan` %in% top10_perusahaan)
+
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(agg_top10_posisi_perusahaan,
+       aes(x = reorder(`Nama Perusahaan`, jumlah_lowongan, sum),
+           y = jumlah_lowongan,
+           fill = Posisi)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Top 10 Perusahaan dengan Lowongan Terbanyak Berdasarkan Posisi",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan",
+       fill = "Posisi") +
+  theme_minimal()
+
+```
+
+# Lowongan Berdasarkan Kota
+
+```{r}
+library(dplyr)
+library(stringr)
+
+data_kalibrr_cleaned <- data_kalibrr %>%
+  mutate(Kota = case_when(
+    # Jakarta - dengan pembagian wilayah
+    str_detect(Kota, regex("South Jakarta|Jakarta Selatan", ignore_case = TRUE)) ~ "Jakarta Selatan",
+    str_detect(Kota, regex("North Jakarta|Jakarta Utara", ignore_case = TRUE)) ~ "Jakarta Utara",
+    str_detect(Kota, regex("West Jakarta|Jakarta Barat", ignore_case = TRUE)) ~ "Jakarta Barat",
+    str_detect(Kota, regex("East Jakarta|Jakarta Timur", ignore_case = TRUE)) ~ "Jakarta Timur",
+    str_detect(Kota, regex("Central Jakarta|Jakarta Pusat", ignore_case = TRUE)) ~ "Jakarta Pusat",
+    str_detect(Kota, regex("Jakarta", ignore_case = TRUE)) ~ "Jakarta",  # fallback
+    
+    # Bandung
+    str_detect(Kota, regex("Bandung", ignore_case = TRUE)) ~ "Bandung",
+    
+    # Bogor
+    str_detect(Kota, regex("Bogor", ignore_case = TRUE)) ~ "Bogor",
+    
+    # Bekasi
+    str_detect(Kota, regex("Bekasi", ignore_case = TRUE)) ~ "Bekasi",
+    
+    # Tangerang
+    str_detect(Kota, regex("Tangerang", ignore_case = TRUE)) ~ "Tangerang",
+    
+    # Surabaya
+    str_detect(Kota, regex("Surabaya", ignore_case = TRUE)) ~ "Surabaya",
+    
+    # Banjarmasin
+    str_detect(Kota, regex("Banjarmasin", ignore_case = TRUE)) ~ "Banjarmasin",
+    
+    # Banyumas
+    str_detect(Kota, regex("Banyumas", ignore_case = TRUE)) ~ "Banyumas",
+    
+    # Depok
+    str_detect(Kota, regex("Depok", ignore_case = TRUE)) ~ "Depok",
+    
+    # Denpasar
+    str_detect(Kota, regex("Denpasar", ignore_case = TRUE)) ~ "Denpasar",
+    
+    # Kota lainnya tetap
+    TRUE ~ as.character(Kota)
+  ))
+
+```
+
+```{r}
+library(dplyr)
+
+top_kota <- data_kalibrr_cleaned %>%
+  filter(!is.na(Kota)) %>%
+  group_by(Kota) %>%
+  summarise(jumlah_lowongan = n()) %>%
+  arrange(desc(jumlah_lowongan)) %>%
+  slice_head(n = 10)
+
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(top_kota, aes(x = reorder(Kota, jumlah_lowongan), y = jumlah_lowongan, fill = Kota)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = jumlah_lowongan), hjust = 0, size = 4) +
+  coord_flip() +
+  labs(title = "Top 10 Kota dengan Jumlah Lowongan Terbanyak",
+       x = "Kota",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+```
+
+# Heatmap jumlah lowongan per status di 10 Kota teratas
+
+```{r}
+data_kota_status <- data_kalibrr_cleaned %>%
+  filter(!is.na(Kota), !is.na(Status)) %>%
+  group_by(Kota, Status) %>%
+  summarise(jumlah_lowongan = n(), .groups = "drop")
+
+top_kota <- data_kota_status %>%
+  group_by(Kota) %>%
+  summarise(total = sum(jumlah_lowongan)) %>%
+  arrange(desc(total)) %>%
+  slice_head(n = 10) %>%
+  pull(Kota)
+
+data_kota_status_top <- data_kota_status %>%
+  filter(Kota %in% top_kota)
+
+ggplot(data_kota_status_top, aes(x = Status, y = reorder(Kota, jumlah_lowongan), fill = jumlah_lowongan)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = jumlah_lowongan), color = "black", size = 3) +
+  scale_fill_gradient(low = "#e0f3f8", high = "#08306b") +
+  labs(title = "Heatmap Jumlah Lowongan berdasarkan Kota dan Status",
+       x = "Status",
+       y = "Kota",
+       fill = "Jumlah") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+# Heatmap jumlah lowongan berdasarkan posisi dan status
+
+```{r}
+library(ggplot2)
+
+ggplot(data_posisi_status, aes(x = Status, y = reorder(Posisi, jumlah_lowongan), fill = jumlah_lowongan)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = jumlah_lowongan), color = "black", size = 3) +
+  scale_fill_gradient(low = "lightblue", high = "#08305b") +
+  labs(title = "Heatmap Jumlah Lowongan berdasarkan Posisi dan Status",
+       x = "Status",
+       y = "Posisi",
+       fill = "Jumlah") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+```{r }
+# Membersihkan Kolom Gaji
+# Kolom 'Gaji' kemungkinan berisi teks seperti "Rp 12.000.000" atau "Gaji Tidak Diumumkan"
+data_kalibrr_cleaned <- data_kalibrr %>%
+  mutate(
+    Gaji_Numerik = str_trim(Gaji),  # Hilangkan spasi depan/belakang
+    Gaji_Numerik = ifelse(
+      str_detect(Gaji_Numerik, regex("tidak diumumkan", ignore_case = TRUE)) | Gaji_Numerik == "", 
+      NA, 
+      Gaji_Numerik
+    ),
+    Gaji_Numerik = str_replace_all(Gaji_Numerik, "Rp\\s*", ""),  # Hapus "Rp" dan spasi setelahnya
+    Gaji_Numerik = str_replace_all(Gaji_Numerik, "\\.", ""),      # Hapus titik
+    Gaji_Numerik = suppressWarnings(as.numeric(Gaji_Numerik))     # Konversi jadi numerik
+  )
+
+# Cek hasil
+#data_kalibrr_cleaned %>% select(Gaji, Gaji_Numerik)
+#summary(data_kalibrr_cleaned$Gaji_Numerik)
+#unique(data_kalibrr_cleaned$Gaji_Numerik)
+
+```
+
+
+```{r}
+
+# Hitung jumlah baris dengan gaji diumumkan vs tidak diumumkan
+gaji_summary <- data_kalibrr_cleaned %>%
+  mutate(Status_Gaji = ifelse(is.na(Gaji_Numerik), "Tidak Diumumkan", "Diumumkan")) %>%
+  count(Status_Gaji)
+```
+
+# Jumlah lowongan berdasrkan gaji diumumkan dan tidak
+```{r}
+# Bar plot
+plot_gaji_bar <- ggplot(gaji_summary, aes(x = Status_Gaji, y = n, fill = Status_Gaji)) +
+  geom_bar(stat = "identity", width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = n), vjust = 0, size = 4) +
+  labs(title = "Jumlah Lowongan berdasarkan Status Gaji",
+       x = "Status Gaji",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+print(plot_gaji_bar)
+
+
+```
+
+# Distribusi posisi gaji yang tidak diumumkan
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+
+# 1. Filter data gaji tidak diumumkan dan hitung posisi
+gaji_tidak_diumumkan <- data_kalibrr_cleaned %>%
+  filter(is.na(Gaji_Numerik), !is.na(Posisi), Posisi != "") %>%
+  count(Posisi, sort = TRUE) %>%
+  top_n(10, n) %>%
+  mutate(
+    proporsi = n / sum(n),  # Hitung proporsi
+    label = paste0(Posisi, " (", percent(proporsi), ")")  # Label gabungan
+  )
+
+# 2. Buat pie chart dengan persentase
+plot_pie <- ggplot(gaji_tidak_diumumkan, aes(x = "", y = n, fill = Posisi)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  labs(title = "Distribusi Posisi dengan Gaji Tidak Diumumkan") +
+  theme_void() +
+  theme(legend.position = "right") +
+  guides(fill = guide_legend(title = "Posisi")) +
+  geom_text(aes(label = percent(proporsi)),
+            position = position_stack(vjust = 0.5),
+            size = 4, color = "white")
+
+# 3. Tampilkan plot
+print(plot_pie)
+
+```
+
+# Boxplot sebaran gaji 
+
+```{r}
+# Visualisasi 2: Distribusi Gaji (setelah cleaning)
+# Menggunakan Gaji_Numerik yang sudah bersih
+
+if (!all(is.na(data_kalibrr_cleaned$Gaji_Numerik))) {
+  
+  
+  # Box Plot (untuk melihat sebaran, median, kuartil, dan outlier)
+  plot_boxplot_gaji <- ggplot(data_kalibrr_cleaned %>% filter(!is.na(Gaji_Numerik)), aes(y = Gaji_Numerik)) +
+    geom_boxplot(fill = "#08306b", color = "black", alpha = 0.7) +
+    scale_y_continuous(labels = scales::comma_format(big.mark = ".", decimal.mark = ",")) +
+    labs(title = "Box Plot Sebaran Gaji",
+         y = "Gaji (Rp)") +
+    coord_flip() + # Membuat boxplot horizontal
+    theme_minimal()
+  print(plot_boxplot_gaji)
+} else {
+  print("Tidak ada data gaji numerik yang valid untuk divisualisasikan.")
+}
+
+
+```
+
+# Rata-rata gaji minimum per tingkat posisi
+```{r}
+# Visualisasi 3: Rata-rata Gaji per Tingkat Posisi
+# Sesuaikan "Tingkat Posisi" jika nama kolomnya berbeda.
+TARGET_COL_TINGKAT_POSISI <- "Posisi" # Ganti jika nama kolom di file Anda berbeda
+
+if (TARGET_COL_TINGKAT_POSISI %in% colnames(data_kalibrr_cleaned) && !all(is.na(data_kalibrr_cleaned$Gaji_Numerik))) {
+  rata_gaji_per_tingkat <- data_kalibrr_cleaned %>%
+    filter(!is.na(Gaji_Numerik) & !is.na(.data[[TARGET_COL_TINGKAT_POSISI]])) %>%
+    group_by(.data[[TARGET_COL_TINGKAT_POSISI]]) %>%
+    summarise(Rata_Rata_Gaji = mean(Gaji_Numerik, na.rm = TRUE),
+              Jumlah_Lowongan = n()) %>%
+    filter(Jumlah_Lowongan > 0) %>% # Hanya tampilkan yang ada data
+    arrange(desc(Rata_Rata_Gaji))
+  
+  plot_gaji_tingkat_posisi <- ggplot(rata_gaji_per_tingkat, aes(x = reorder(.data[[TARGET_COL_TINGKAT_POSISI]], Rata_Rata_Gaji), y = Rata_Rata_Gaji, fill = .data[[TARGET_COL_TINGKAT_POSISI]])) +
+    geom_bar(stat = "identity", show.legend = FALSE) +
+    geom_text(aes(label = paste0("Rp ", scales::comma(Rata_Rata_Gaji, big.mark = ".", decimal.mark = ","))), 
+          vjust = 0.5, hjust = 1.2, size = 3)+
+    coord_flip() +
+    scale_y_continuous(labels = scales::comma_format(prefix = "Rp ", big.mark = ".", decimal.mark = ",")) +
+    labs(title = "Rata-rata Gaji per Tingkat Posisi",
+         x = "Posisi",
+         y = "Rata-rata Gaji (Rp)") +
+    theme_minimal()
+  print(plot_gaji_tingkat_posisi)
+} else {
+  print(paste("Kolom '", TARGET_COL_TINGKAT_POSISI, "' atau data gaji numerik tidak memadai untuk visualisasi ini.", sep=""))
+}
+```
+
+```{r}
+if ("Status" %in% colnames(data_kalibrr_cleaned) & "Pekerjaan" %in% colnames(data_kalibrr_cleaned)) {
+  # Ambil daftar pekerjaan dengan status kontrak
+  pekerjaan_kontrak <- data_kalibrr_cleaned %>%
+    filter(str_detect(Status, regex("kontrak", ignore_case = TRUE)), !is.na(Pekerjaan)) %>%
+    count(Pekerjaan, sort = TRUE)
+
+  # Menampilkan dataframe pekerjaan kontrak
+  print(pekerjaan_kontrak)
+} else {
+  print("Kolom 'Status' atau 'Pekerjaan' tidak ditemukan. Periksa data dan pastikan kolom tersedia.")
+}
+
+```
+
+```{r}
+# Pastikan nama kolom sesuai
+if (all(c("Nama Perusahaan", "Posisi") %in% colnames(data_kalibrr_cleaned))) {
+  
+  # 1. Ambil perusahaan dengan jumlah lowongan terbanyak (Top 1)
+  top1_perusahaan <- data_kalibrr_cleaned %>%
+    filter(!is.na(`Nama Perusahaan`)) %>%
+    count(`Nama Perusahaan`, sort = TRUE) %>%
+    slice(1) %>%
+    pull(`Nama Perusahaan`)
+  
+  # 2. Filter data berdasarkan perusahaan tersebut
+  data_top1_posisi <- data_kalibrr_cleaned %>%
+    filter(`Nama Perusahaan` == top1_perusahaan)
+  
+  # 3. Visualisasi posisi-posisi yang ditawarkan perusahaan tersebut
+  plot_posisi_top1 <- data_top1_posisi %>%
+    count(Posisi, sort = TRUE) %>%
+    ggplot(aes(x = reorder(Posisi, n), y = n, fill = Posisi)) +
+    geom_bar(stat = "identity", show.legend = FALSE) +
+    geom_text(aes(label = n), hjust = 0, size = 3.5) +
+    coord_flip() +
+    labs(title = paste("Distribusi Posisi di", top1_perusahaan),
+         x = "Posisi",
+         y = "Jumlah Lowongan") +
+    theme_minimal()
+  
+  print(plot_posisi_top1)
+  
+} else {
+  print("Kolom 'Nama Perusahaan' atau 'Posisi' tidak ditemukan. Periksa nama kolom.")
+}
+
+```
