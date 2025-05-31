@@ -91,10 +91,10 @@ https://drive.google.com/drive/folders/1Ournc1xKMBfmz0cSJHyeOd8CvF9NXHDq?usp=sha
 Data yang diambil bersifat sementara dan dinamis, mengikuti perubahan yang terjadi di situs Kalibrr. Scraping dilakukan dengan tetap memperhatikan etika dan batasan penggunaan situs web.
 
 # 👩‍💻 Pengembang
-Hazelita Dwi Rahmasari (M05012410)
+Hazelita Dwi Rahmasari (M0501241067)
 
-Mahda Al Maida (M05012410)
+Mahda Al Maida (M0501241088)
 
-Nabila Syukri (M05012410)
+Nabila Syukri (M0501241086)
 
 Yani Prihantini Hiola (M0501241026)
