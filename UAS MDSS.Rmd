@@ -17,7 +17,7 @@ library(scales)  # Untuk format label di plot
 #data_kalibrr
 ```
 
-# Sambungkan dari mongolite
+#Sambungkan dari mongolite
 ```{r}
 library(mongolite)
 
@@ -57,6 +57,9 @@ str(data_kalibrr)
 head(data_kalibrr)
 ```
 
+
+
+
 # Jumlah lowongan berdasarkan posisi
 ```{r}
 posisi <- '[{
@@ -93,7 +96,7 @@ ggplot(data_posisi, aes(x = reorder(Posisi, jumlah_lowongan), y = jumlah_lowonga
 
 ```
 
-# Jumlah lowongan berdasarkan status
+#Jumlah lowongan berdasarkan status
 
 ```{r}
 pipeline_status <- '[{
@@ -167,6 +170,7 @@ ggplot(data_posisi_status, aes(x = reorder(Posisi, jumlah_lowongan), y = jumlah_
 
 ```
 
+
 # Trend jumlah lowongan per bulan
 ```{r}
 pipeline_bulan <- '[{
@@ -207,6 +211,12 @@ ggplot(data_bulan, aes(x = Bulan, y = jumlah_lowongan, fill = Bulan)) +
 
 ```
 
+
+
+
+
+
+
 ```{r}
 ggplot(data_bulan, aes(x = Bulan, y = jumlah_lowongan, group = 1)) +
   geom_point(size = 3, color = "steelblue") +  # Titik
@@ -219,6 +229,35 @@ ggplot(data_bulan, aes(x = Bulan, y = jumlah_lowongan, group = 1)) +
   scale_x_discrete(limits = bulan_order)  # agar urutan bulan tetap terjaga
 
 ```
+
+```{r}
+library(dplyr)
+
+# Filter untuk bulan Juni dan hitung frekuensi pekerjaan
+pekerjaan_juni <- data_kalibrr %>%
+  filter(Bulan == "Juni") %>%
+  count(Pekerjaan, sort = TRUE)
+
+# Lihat 10 pekerjaan teratas di bulan Juni
+head(pekerjaan_juni, 10)
+
+```
+```{r}
+library(ggplot2)
+
+top10_juni <- pekerjaan_juni %>% top_n(10, n)
+
+ggplot(top10_juni, aes(x = reorder(Pekerjaan, n), y = n, fill = Pekerjaan)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n), hjust = -0.2) +
+  coord_flip() +
+  labs(title = "Top 10 Pekerjaan di Bulan Juni",
+       x = "Pekerjaan",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+```
+
 
 # Perusahaan Top 10 dengan Jumlah lowongan terbanyak
 
@@ -259,7 +298,9 @@ ggplot(data_perusahaan, aes(x = reorder(NamaPerusahaan, jumlah_lowongan),
 
 ```
 
-# Top 10 Perusahaan berdasarkan posisi
+
+
+#Top 10 Perusahaan berdasarkan posisi
 
 ```{r}
 pipeline <- '[{
@@ -321,7 +362,7 @@ ggplot(agg_top10_posisi_perusahaan,
 
 ```
 
-# Lowongan Berdasarkan Kota
+#Lowongan Berdasarkan Kota
 
 ```{r}
 library(dplyr)
@@ -394,6 +435,71 @@ ggplot(top_kota, aes(x = reorder(Kota, jumlah_lowongan), y = jumlah_lowongan, fi
        y = "Jumlah Lowongan") +
   theme_minimal()
 ```
+#Perusahaan di Tangerang
+```{r}
+library(dplyr)
+
+perusahaan_tangerang <- data_kalibrr_cleaned %>%
+  filter(Kota == "Tangerang") %>%
+  group_by(`Nama Perusahaan`) %>%
+  summarise(jumlah_lowongan = n()) %>%
+  arrange(desc(jumlah_lowongan))
+
+library(ggplot2)
+
+ggplot(perusahaan_tangerang, aes(x = reorder(`Nama Perusahaan`, jumlah_lowongan),
+                                  y = jumlah_lowongan,
+                                  fill = `Nama Perusahaan`)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = jumlah_lowongan), hjust = -0.2, size = 4) +
+  coord_flip() +
+  labs(title = "Jumlah Lowongan di Tangerang per Perusahaan",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan") +
+  theme_minimal()
+
+```
+
+```{r}
+library(dplyr)
+
+perusahaan_posisi_tangerang <- data_kalibrr_cleaned %>%
+  filter(Kota == "Tangerang") %>%
+  group_by(`Nama Perusahaan`, Posisi) %>%
+  summarise(jumlah_lowongan = n(), .groups = "drop") %>%
+  arrange(desc(jumlah_lowongan))
+
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(perusahaan_posisi_tangerang,
+       aes(x = Posisi, y = `Nama Perusahaan`, fill = jumlah_lowongan)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Jumlah Lowongan per Perusahaan dan Posisi di Tangerang",
+       x = "Posisi",
+       y = "Nama Perusahaan",
+       fill = "Jumlah Lowongan") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+ggplot(perusahaan_posisi_tangerang,
+       aes(x = reorder(`Nama Perusahaan`, jumlah_lowongan, sum),
+           y = jumlah_lowongan, fill = Posisi)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Lowongan di Tangerang berdasarkan Perusahaan dan Posisi",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan",
+       fill = "Posisi") +
+  theme_minimal()
+
+```
+
 
 # Heatmap jumlah lowongan per status di 10 Kota teratas
 
@@ -425,8 +531,7 @@ ggplot(data_kota_status_top, aes(x = Status, y = reorder(Kota, jumlah_lowongan),
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
-
-# Heatmap jumlah lowongan berdasarkan posisi dan status
+#Heatmap jumlah lowongan berdasarkan posisi dan status
 
 ```{r}
 library(ggplot2)
@@ -443,6 +548,7 @@ ggplot(data_posisi_status, aes(x = Status, y = reorder(Posisi, jumlah_lowongan),
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
 
 
 ```{r }
@@ -477,7 +583,7 @@ gaji_summary <- data_kalibrr_cleaned %>%
   count(Status_Gaji)
 ```
 
-# Jumlah lowongan berdasrkan gaji diumumkan dan tidak
+#Jumlah lowongan berdasrkan gaji diumumkan dan tidak
 ```{r}
 # Bar plot
 plot_gaji_bar <- ggplot(gaji_summary, aes(x = Status_Gaji, y = n, fill = Status_Gaji)) +
@@ -493,7 +599,7 @@ print(plot_gaji_bar)
 
 ```
 
-# Distribusi posisi gaji yang tidak diumumkan
+#Distribusi posisi gaji yang tidak diumumkan
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -526,7 +632,7 @@ print(plot_pie)
 
 ```
 
-# Boxplot sebaran gaji 
+#Boxplot sebaran gaji 
 
 ```{r}
 # Visualisasi 2: Distribusi Gaji (setelah cleaning)
@@ -551,7 +657,7 @@ if (!all(is.na(data_kalibrr_cleaned$Gaji_Numerik))) {
 
 ```
 
-# Rata-rata gaji minimum per tingkat posisi
+#Rata-rata gaji minimum per tingkat posisi
 ```{r}
 # Visualisasi 3: Rata-rata Gaji per Tingkat Posisi
 # Sesuaikan "Tingkat Posisi" jika nama kolomnya berbeda.
@@ -582,6 +688,8 @@ if (TARGET_COL_TINGKAT_POSISI %in% colnames(data_kalibrr_cleaned) && !all(is.na(
 }
 ```
 
+
+
 ```{r}
 if ("Status" %in% colnames(data_kalibrr_cleaned) & "Pekerjaan" %in% colnames(data_kalibrr_cleaned)) {
   # Ambil daftar pekerjaan dengan status kontrak
@@ -596,6 +704,9 @@ if ("Status" %in% colnames(data_kalibrr_cleaned) & "Pekerjaan" %in% colnames(dat
 }
 
 ```
+
+
+
 
 ```{r}
 # Pastikan nama kolom sesuai
@@ -631,3 +742,309 @@ if (all(c("Nama Perusahaan", "Posisi") %in% colnames(data_kalibrr_cleaned))) {
 }
 
 ```
+
+```{r}
+# Pastikan nama kolom sesuai
+if (all(c("Nama Perusahaan", "Posisi") %in% colnames(data_kalibrr_cleaned))) {
+  
+  # 1. Ambil perusahaan dengan jumlah lowongan terbanyak (Top 1)
+  top1_perusahaan <- data_kalibrr_cleaned %>%
+    filter(!is.na(`Nama Perusahaan`)) %>%
+    count(`Nama Perusahaan`, sort = TRUE) %>%
+    slice(2) %>%
+    pull(`Nama Perusahaan`)
+  
+  # 2. Filter data berdasarkan perusahaan tersebut
+  data_top1_posisi <- data_kalibrr_cleaned %>%
+    filter(`Nama Perusahaan` == top1_perusahaan)
+  
+  # 3. Visualisasi posisi-posisi yang ditawarkan perusahaan tersebut
+  plot_posisi_top1 <- data_top1_posisi %>%
+    count(Posisi, sort = TRUE) %>%
+    ggplot(aes(x = reorder(Posisi, n), y = n, fill = Posisi)) +
+    geom_bar(stat = "identity", show.legend = FALSE) +
+    geom_text(aes(label = n), hjust = 0, size = 3.5) +
+    coord_flip() +
+    labs(title = paste("Distribusi Posisi di", top1_perusahaan),
+         x = "Posisi",
+         y = "Jumlah Lowongan") +
+    theme_minimal()
+  
+  print(plot_posisi_top1)
+  
+} else {
+  print("Kolom 'Nama Perusahaan' atau 'Posisi' tidak ditemukan. Periksa nama kolom.")
+}
+
+```
+
+
+
+```{r}
+# Install jika belum ada
+#install.packages("wordcloud")
+#install.packages("RColorBrewer")
+
+# Panggil library
+library(wordcloud)
+library(RColorBrewer)
+library(dplyr)
+
+frekuensi_pekerjaan <- data_kalibrr_cleaned %>%
+  filter(!is.na(Pekerjaan)) %>%
+  mutate(Pekerjaan = word(Pekerjaan, 1, 2)) %>%
+  count(Pekerjaan) %>%
+  arrange(desc(n))
+
+# Buat wordcloud
+wordcloud(words = frekuensi_pekerjaan$Pekerjaan,
+          freq = frekuensi_pekerjaan$n,
+          min.freq = 1,
+          max.words = 100,
+          random.order = FALSE,
+          rot.per = 0.25,
+          colors = brewer.pal(8, "Dark2"))
+
+```
+```{r}
+data_kalibrr_cleaned %>%
+  distinct(`Kota`) %>%
+  count()  # atau: nrow( . )
+
+```
+
+```{r}
+library(dplyr)
+
+data_kalibrr_cleaned %>%
+  filter(Posisi == "Magang / OJT") %>%         # Filter berdasarkan status Magang
+  distinct(`Nama Perusahaan`) %>%        # Ambil nama perusahaan unik
+  arrange(`Nama Perusahaan`)             # Urutkan secara alfabetis
+
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Filter data untuk posisi Magang
+magang_perusahaan <- data_kalibrr_cleaned %>%
+  filter(Posisi == "Magang / OJT") %>%
+  count(`Nama Perusahaan`, sort = TRUE) %>%
+  top_n(10, n)  # Ambil 10 perusahaan teratas
+
+# Visualisasi
+ggplot(magang_perusahaan,
+       aes(x = reorder(`Nama Perusahaan`, n), y = n, fill = `Nama Perusahaan`)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n), hjust = -0.2) +
+  coord_flip() +
+  labs(title = "Perusahaan dengan Lowongan Magang",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan Magang") +
+  theme_minimal()
+
+```
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Filter data Magang dan hitung jumlah per perusahaan
+magang_perusahaan <- data_kalibrr_cleaned %>%
+  filter(Posisi == "Magang / OJT") %>%
+  count(`Nama Perusahaan`, sort = TRUE)
+
+# Hitung proporsi
+magang_perusahaan <- magang_perusahaan %>%
+  mutate(prop = n / sum(n),
+         label = paste0(`Nama Perusahaan`, " (", round(prop * 100, 1), "%)"))
+
+# Donut chart
+ggplot(magang_perusahaan, aes(x = 2, y = prop, fill = `Nama Perusahaan`)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y", start = 0) +
+  geom_text(aes(label = ifelse(prop > 0.03, label, "")), 
+            position = position_stack(vjust = 0.5), size = 3) +
+  xlim(0.5, 2.5) +  # Membuat bagian tengah kosong (donut)
+  labs(title = "Distribusi Lowongan Magang per Perusahaan") +
+  theme_void() +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Ambil 10 perusahaan teratas dengan lowongan Magang
+top10_magang_perusahaan <- data_kalibrr_cleaned %>%
+  filter(Posisi == "Magang / OJT") %>%
+  count(`Nama Perusahaan`, sort = TRUE) %>%
+  top_n(10, n) %>%
+  pull(`Nama Perusahaan`)
+
+# Ambil pekerjaan magang di perusahaan tersebut
+magang_pekerjaan_perusahaan <- data_kalibrr_cleaned %>%
+  filter(Posisi == "Magang / OJT", `Nama Perusahaan` %in% top10_magang_perusahaan) %>%
+  count(`Nama Perusahaan`, Pekerjaan, sort = TRUE)
+
+# Visualisasi: Stacked barplot
+ggplot(magang_pekerjaan_perusahaan,
+       aes(x = reorder(`Nama Perusahaan`, n, sum),
+           y = n,
+           fill = Pekerjaan)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Lowongan Magang Berdasarkan Pekerjaan di 10 Perusahaan Teratas",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan",
+       fill = "Pekerjaan") +
+  theme_minimal()
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Ambil 10 perusahaan teratas dengan lowongan Magang
+top10_magang_perusahaan <- data_kalibrr_cleaned %>%
+  filter(Posisi == "Supervisor / Asisten Manager") %>%
+  count(`Nama Perusahaan`, sort = TRUE) %>%
+  top_n(30, n) %>%
+  pull(`Nama Perusahaan`)
+
+# Ambil pekerjaan magang di perusahaan tersebut
+magang_pekerjaan_perusahaan <- data_kalibrr_cleaned %>%
+  filter(Posisi == "Supervisor / Asisten Manager", `Nama Perusahaan` %in% top10_magang_perusahaan) %>%
+  count(`Nama Perusahaan`, Pekerjaan, sort = TRUE)
+
+# Visualisasi: Stacked barplot
+ggplot(magang_pekerjaan_perusahaan,
+       aes(x = reorder(`Nama Perusahaan`, n, sum),
+           y = n,
+           fill = Pekerjaan)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Lowongan Magang Berdasarkan Pekerjaan di 10 Perusahaan Teratas",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan",
+       fill = "Pekerjaan") +
+  theme_minimal()
+```
+```{r}
+library(dplyr)
+
+data_kota_status <- data_kalibrr_cleaned %>%
+  count(Kota, Status, name = "jumlah_lowongan")
+
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Filter data untuk bulan Februari, September, dan Oktober
+bulan_pilihan <- c("Februari", "September", "Oktober")
+
+top_per_bulan <- data_kalibrr_cleaned %>%
+  filter(Bulan %in% bulan_pilihan) %>%
+  count(Bulan, `Nama Perusahaan`, sort = TRUE) %>%
+  group_by(Bulan) %>%
+  slice_max(n, n = 5) %>%
+  ungroup()
+
+# Visualisasi vertikal dengan facet wrap
+ggplot(top_per_bulan, aes(x = reorder(`Nama Perusahaan`, n), y = n, fill = `Nama Perusahaan`)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  labs(title = "Top 5 Perusahaan per Bulan (Februari, September, Oktober)",
+       x = "Nama Perusahaan",
+       y = "Jumlah Lowongan") +
+  facet_wrap(~Bulan, scales = "free_x") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(forcats)
+
+# Susun urutan nama bulan
+bulan_order <- c("Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                 "Juli", "Agustus", "September", "Oktober", "November", "Desember")
+
+# Hitung jumlah perusahaan unik per bulan
+data_perusahaan_bulanan <- data_kalibrr_cleaned %>%
+  filter(!is.na(`Nama Perusahaan`), !is.na(Bulan)) %>%
+  group_by(Bulan) %>%
+  summarise(jumlah_perusahaan = n_distinct(`Nama Perusahaan`)) %>%
+  ungroup() %>%
+  mutate(Bulan = factor(Bulan, levels = bulan_order))
+
+# Visualisasi jumlah perusahaan per bulan
+ggplot(data_perusahaan_bulanan, aes(x = Bulan, y = jumlah_perusahaan, fill = Bulan)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = jumlah_perusahaan), vjust = -0.5) +
+  labs(title = "Jumlah Perusahaan yang Membuka Lowongan per Bulan",
+       x = "Bulan",
+       y = "Jumlah Perusahaan") +
+  theme_minimal()
+
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+
+# Pastikan format bulan
+bulan_order <- c("Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                 "Juli", "Agustus", "September", "Oktober", "November", "Desember")
+
+# Hitung jumlah lowongan dan jumlah perusahaan per bulan
+data_summary <- data_kalibrr_cleaned %>%
+  group_by(Bulan) %>%
+  summarise(
+    jumlah_lowongan = n(),
+    jumlah_perusahaan = n_distinct(`Nama Perusahaan`)
+  ) %>%
+  mutate(Bulan = factor(Bulan, levels = bulan_order)) %>%
+  arrange(Bulan)
+
+# Ubah data ke format long untuk ggplot
+data_long <- data_summary %>%
+  pivot_longer(cols = c(jumlah_lowongan, jumlah_perusahaan),
+               names_to = "Tipe",
+               values_to = "Jumlah")
+
+# Visualisasi Line Chart
+ggplot(data_long, aes(x = Bulan, y = Jumlah, color = Tipe, group = Tipe)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  labs(title = "Jumlah Lowongan vs Perusahaan per Bulan",
+       x = "Bulan",
+       y = "Jumlah",
+       color = "Jenis") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+# Korelasi antara Jumlah lowongan dan jumlah perusahaan
+cor(data_summary$jumlah_lowongan, data_summary$jumlah_perusahaan, method = "pearson")
+
+```
+
+
+
+
