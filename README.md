@@ -83,8 +83,11 @@ Berikut adalah salah satu contoh dokumen di MongoDB:
 
 # 📚 File Proyek
 + Berikut adalah file yang berisi link agregasi dan visualisasi data di R:
+
 https://drive.google.com/drive/folders/1Ournc1xKMBfmz0cSJHyeOd8CvF9NXHDq?usp=sharing
+
 + Berikut adalah link yang berisi materi presentasi scraping:
+  
 https://www.canva.com/design/DAGom4L-Uus/isvW80mhBCEc9kd8qPTTZQ/edit?utm_content=DAGom4L-Uus&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 # ⚠️ Catatan
