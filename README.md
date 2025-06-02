@@ -40,7 +40,7 @@ Proyek ini bertujuan untuk mengambil (scraping) data lowongan pekerjaan yang mas
 
   Tanggal terakhir pelamar dapat mengajukan lamaran untuk posisi tersebut.
 
-Scraping data dilakukan pada website https://www.kalibrr.id/id-ID/home dengan menggunakan Data Miner
+Scraping data dilakukan pada website https://www.kalibrr.id/ dengan menggunakan Data Miner
 
 # 📌 Tujuan
 Data yang dikumpulkan digunakan untuk analisis lebih lanjut, yaitu untuk mengetahui:
